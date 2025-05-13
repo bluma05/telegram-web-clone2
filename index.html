@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Web</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(128, 128, 128, 0.3);
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(128, 128, 128, 0.5);
+        }
+        
+        /* Animation for message */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message-animation {
+            animation: fadeIn 0.2s ease-out;
+        }
+        
+        /* Custom checkbox for theme toggle */
+        .theme-checkbox {
+            opacity: 0;
+            position: absolute;
+        }
+        .theme-label {
+            width: 50px;
+            height: 24px;
+            background-color: #ddd;
+            display: flex;
+            border-radius: 50px;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px;
+            position: relative;
+            cursor: pointer;
+        }
+        .theme-ball {
+            width: 20px;
+            height: 20px;
+            background-color: white;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            border-radius: 50%;
+            transition: transform 0.2s linear;
+        }
+        .theme-checkbox:checked + .theme-label .theme-ball {
+            transform: translateX(26px);
+        }
+        
+        /* Modal transition */
+        .modal {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .modal-enter {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        .modal-enter-active {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .modal-exit {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .modal-exit-active {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+    </style>
+</head>
+<body class="h-full bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
+    <div id="app" class="h-full">
+        <!-- Login Screen -->
+        <div id="login-screen" class="flex flex-col items-center justify-center h-full bg-blue-500 dark:bg-blue-700 text-white p-4">
+            <div class="w-full max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
+                <div class="mb-6">
+                    <i class="fab fa-telegram text-5xl text-blue-500 dark:text-blue-400"></i>
+                    <h1 class="text-2xl font-bold mt-4 text-gray-800 dark:text-white">Telegram Web</h1>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label for="phone" class="block text-left text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone number</label>
+                        <input type="text" id="phone" class="+1 123 456 7890" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="+1 123) 456-7890">
+                    </div>
+                    
+                    <button id="login-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md transition duration-200">
+                        Next
+                    </button>
+                    
+                    <div class="text-sm text-gray-600 dark:text-gray-400">
+                        <p>By signing up, you agree to our <a href="#" class="text-blue-500 hover:underline">Terms of Service</a> and <a href="#" class="text-blue-500 hover:underline">Privacy Policy</a>.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-8 text-sm text-white dark:text-gray-300">
+                <p>English ▾</p>
+            </div>
+        </div>
+        
+        <!-- Main App (hidden initially) -->
+        <div id="main-app" class="h-full hidden">
+            <!-- Sidebar -->
+            <div class="flex h-full">
+                <div class="w-80 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full md:flex">
+                    <!-- Search -->
+                    <div class="p-3 border-b border-gray-200 dark:border-gray-700">
+                        <div class="relative">
+                            <input type="text" placeholder="Search" class="w-full bg-gray-100 dark:bg-gray-700 rounded-lg py-2 px-4 pl-10 focus:outline-none text-gray-800 dark:text-white">
+                            <i class="fas fa-search absolute left-3 top-3 text-gray-500 dark:text-gray-400"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Chat list -->
+                    <div class="flex-1 overflow-y-auto custom-scrollbar">
+                        <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                            <!-- Chat item 1 -->
+                            <div class="p-3 flex items-center hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer chat-item" data-chat="1">
+                                <div class="relative">
+                                    <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Profile" class="w-12 h-12 rounded-full object-cover">
+                                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
+                                </div>
+                                <div class="ml-3 flex-1">
+                                    <div class="flex justify-between items-center">
+                                        <h3 class="font-medium text-gray-900 dark:text-white">Sarah Johnson</h3>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">12:30</span>
+                                    </div>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 truncate">Hey, how are you doing?</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Chat item 2 -->
+                            <div class="p-3 flex items-center hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer chat-item" data-chat="2">
+                                <div class="relative">
+                                    <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Profile" class="w-12 h-12 rounded-full object-cover">
+                                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
+                                </div>
+                                <div class="ml-3 flex-1">
+                                    <div class="flex justify-between items-center">
+                                        <h3 class="font-medium text-gray-900 dark:text-white">Mike Peterson</h3>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">10:15</span>
+                                    </div>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 truncate">Meeting at 2pm tomorrow</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Chat item 3 -->
+                            <div class="p-3 flex items-center hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer chat-item" data-chat="3">
+                                <div class="relative">
+                                    <img src="https://randomuser.me/api/portraits/women/68.jpg" alt="Profile" class="w-12 h-12 rounded-full object-cover">
+                                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-gray-400 rounded-full border-2 border-white dark:border-gray-800"></div>
+                                </div>
+                                <div class="ml-3 flex-1">
+                                    <div class="flex justify-between items-center">
+                                        <h3 class="font-medium text-gray-900 dark:text-white">Emma Wilson</h3>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">Yesterday</span>
+                                    </div>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 truncate">Thanks for the help!</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Chat item 4 -->
+                            <div class="p-3 flex items-center hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer chat-item" data-chat="4">
+                                <div class="relative">
+                                    <img src="https://randomuser.me/api/portraits/men/75.jpg" alt="Profile" class="w-12 h-12 rounded-full object-cover">
+                                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
+                                </div>
+                                <div class="ml-3 flex-1">
+                                    <div class="flex justify-between items-center">
+                                        <h3 class="font-medium text-gray-900 dark:text-white">David Kim</h3>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">Monday</span>
+                                    </div>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 truncate">Did you see the news?</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Chat item 5 -->
+                            <div class="p-3 flex items-center hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer chat-item" data-chat="5">
+                                <div class="relative">
+                                    <img src="https://randomuser.me/api/portraits/women/90.jpg" alt="Profile" class="w-12 h-12 rounded-full object-cover">
+                                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-gray-400 rounded-full border-2 border-white dark:border-gray-800"></div>
+                                </div>
+                                <div class="ml-3 flex-1">
+                                    <div class="flex justify-between items-center">
+                                        <h3 class="font-medium text-gray-900 dark:text-white">Lisa Wong</h3>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">7/20/23</span>
+                                    </div>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 truncate">Let's catch up soon!</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- User menu -->
+                    <div class="p-3 border-t border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center">
+                            <img src="https://randomuser.me/api/portraits/men/1.jpg" alt="Profile" class="w-10 h-10 rounded-full object-cover">
+                            <div class="ml-3 flex-1">
+                                <h3 class="font-medium text-gray-900 dark:text-white">John Doe</h3>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Online</p>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="theme-toggle" class="theme-checkbox">
+                                    <label for="theme-toggle" class="theme-label">
+                                        <i class="fas fa-sun text-yellow-400"></i>
+                                        <i class="fas fa-moon text-gray-400"></i>
+                                        <span class="theme-ball"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Chat area -->
+                <div class="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700">
+                    <!-- Empty state -->
+                    <div id="empty-chat" class="flex-1 flex flex-col items-center justify-center text-center p-6">
+                        <div class="w-24 h-24 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mb-4">
+                            <i class="fab fa-telegram text-4xl text-blue-500 dark:text-blue-400"></i>
+                        </div>
+                        <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-2">Telegram Web</h2>
+                        <p class="text-gray-600 dark:text-gray-400 max-w-md">Select a chat to start messaging. Your messages are end-to-end encrypted.</p>
+                    </div>
+                    
+                    <!-- Active chat (hidden initially) -->
+                    <div id="active-chat" class="hidden flex-1 flex flex-col">
+                        <!-- Chat header -->
+                        <div class="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center bg-white dark:bg-gray-800">
+                            <button id="back-to-chats" class="md:hidden mr-2 text-gray-500 dark:text-gray-400">
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+                            <div class="flex items-center flex-1">
+                                <img id="chat-avatar" src="" alt="Profile" class="w-10 h-10 rounded-full object-cover">
+                                <div class="ml-3">
+                                    <h3 id="chat-name" class="font-medium text-gray-900 dark:text-white"></h3>
+                                    <p id="chat-status" class="text-xs text-gray-500 dark:text-gray-400"></p>
+                                </div>
+                            </div>
+                            <div class="flex space-x-4">
+                                <button class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                                <button class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Messages -->
+                        <div id="messages-container" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3">
+                            <!-- Messages will be inserted here dynamically -->
+                        </div>
+                        
+                        <!-- Message input -->
+                        <div class="p-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                            <div class="flex items-center">
+                                <button class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mx-2">
+                                    <i class="far fa-smile"></i>
+                                </button>
+                                <button class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mx-2">
+                                    <i class="fas fa-paperclip"></i>
+                                </button>
+                                <input type="text" id="message-input" placeholder="Write a message..." class="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full py-2 px-4 focus:outline-none text-gray-800 dark:text-white mx-2">
+                                <button id="send-btn" class="ml-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Theme toggle
+            const themeToggle = document.getElementById('theme-toggle');
+            const html = document.documentElement;
+            
+            // Check for saved theme preference or use preferred color scheme
+            const savedTheme = localStorage.getItem('theme') || 
+                              (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            
+            if (savedTheme === 'dark') {
+                html.classList.add('dark');
+                themeToggle.checked = true;
+            }
+            
+            themeToggle.addEventListener('change', function() {
+                if (this.checked) {
+                    html.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    html.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                }
+            });
+            
+            // Login simulation
+            const loginBtn = document.getElementById('login-btn');
+            const loginScreen = document.getElementById('login-screen');
+            const mainApp = document.getElementById('main-app');
+            
+            loginBtn.addEventListener('click', function() {
+                loginScreen.classList.add('hidden');
+                mainApp.classList.remove('hidden');
+            });
+            
+            // Chat functionality
+            const chatItems = document.querySelectorAll('.chat-item');
+            const emptyChat = document.getElementById('empty-chat');
+            const activeChat = document.getElementById('active-chat');
+            const backToChats = document.getElementById('back-to-chats');
+            const messagesContainer = document.getElementById('messages-container');
+            const messageInput = document.getElementById('message-input');
+            const sendBtn = document.getElementById('send-btn');
+            const chatName = document.getElementById('chat-name');
+            const chatStatus = document.getElementById('chat-status');
+            const chatAvatar = document.getElementById('chat-avatar');
+            
+            // Sample chat data
+            const chats = {
+                1: {
+                    name: "Sarah Johnson",
+                    status: "online",
+                    avatar: "https://randomuser.me/api/portraits/women/44.jpg",
+                    messages: [
+                        { text: "Hey there!", sender: "them", time: "12:25" },
+                        { text: "How are you doing?", sender: "them", time: "12:25" },
+                        { text: "I'm good, thanks! How about you?", sender: "me", time: "12:28" },
+                        { text: "Pretty good! Just working on some projects.", sender: "them", time: "12:30" }
+                    ]
+                },
+                2: {
+                    name: "Mike Peterson",
+                    status: "online",
+                    avatar: "https://randomuser.me/api/portraits/men/32.jpg",
+                    messages: [
+                        { text: "Hi Mike, about tomorrow's meeting", sender: "me", time: "10:10" },
+                        { text: "Meeting at 2pm tomorrow", sender: "them", time: "10:15" },
+                        { text: "Got it, I'll be there", sender: "me", time: "10:16" }
+                    ]
+                },
+                3: {
+                    name: "Emma Wilson",
+                    status: "last seen yesterday at 15:42",
+                    avatar: "https://randomuser.me/api/portraits/women/68.jpg",
+                    messages: [
+                        { text: "Can you help me with the project?", sender: "them", time: "Yesterday 15:30" },
+                        { text: "Sure, what do you need?", sender: "me", time: "Yesterday 15:35" },
+                        { text: "Thanks for the help!", sender: "them", time: "Yesterday 15:42" }
+                    ]
+                },
+                4: {
+                    name: "David Kim",
+                    status: "online",
+                    avatar: "https://randomuser.me/api/portraits/men/75.jpg",
+                    messages: [
+                        { text: "Did you see the news?", sender: "them", time: "Monday 18:20" },
+                        { text: "No, what happened?", sender: "me", time: "Monday 18:25" }
+                    ]
+                },
+                5: {
+                    name: "Lisa Wong",
+                    status: "last seen a long time ago",
+                    avatar: "https://randomuser.me/api/portraits/women/90.jpg",
+                    messages: [
+                        { text: "Hey, it's been a while!", sender: "me", time: "7/20/23 10:00" },
+                        { text: "Let's catch up soon!", sender: "them", time: "7/20/23 12:30" }
+                    ]
+                }
+            };
+            
+            // Load chat when clicking on a chat item
+            chatItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const chatId = this.getAttribute('data-chat');
+                    const chat = chats[chatId];
+                    
+                    // Update chat header
+                    chatName.textContent = chat.name;
+                    chatStatus.textContent = chat.status;
+                    chatAvatar.src = chat.avatar;
+                    
+                    // Load messages
+                    messagesContainer.innerHTML = '';
+                    chat.messages.forEach(msg => {
+                        const messageElement = document.createElement('div');
+                        messageElement.classList.add('message-animation');
+                        
+                        if (msg.sender === 'me') {
+                            messageElement.innerHTML = `
+                                <div class="flex justify-end">
+                                    <div class="bg-blue-500 text-white rounded-lg py-2 px-3 max-w-xs md:max-w-md lg:max-w-lg">
+                                        <p>${msg.text}</p>
+                                        <p class="text-xs text-blue-100 text-right mt-1">${msg.time}</p>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            messageElement.innerHTML = `
+                                <div class="flex justify-start">
+                                    <div class="bg-white dark:bg-gray-700 rounded-lg py-2 px-3 max-w-xs md:max-w-md lg:max-w-lg">
+                                        <p class="text-gray-800 dark:text-white">${msg.text}</p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${msg.time}</p>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        messagesContainer.appendChild(messageElement);
+                    });
+                    
+                    // Scroll to bottom
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    
+                    // Show active chat and hide empty state
+                    emptyChat.classList.add('hidden');
+                    activeChat.classList.remove('hidden');
+                    
+                    // On mobile, hide sidebar when chat is open
+                    if (window.innerWidth < 768) {
+                        document.querySelector('.w-80').classList.add('hidden');
+                    }
+                });
+            });
+            
+            // Back to chats button (mobile)
+            backToChats.addEventListener('click', function() {
+                emptyChat.classList.remove('hidden');
+                activeChat.classList.add('hidden');
+                document.querySelector('.w-80').classList.remove('hidden');
+            });
+            
+            // Send message
+            function sendMessage() {
+                const messageText = messageInput.value.trim();
+                if (messageText) {
+                    const now = new Date();
+                    const timeString = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
+                    
+                    const messageElement = document.createElement('div');
+                    messageElement.classList.add('message-animation');
+                    messageElement.innerHTML = `
+                        <div class="flex justify-end">
+                            <div class="bg-blue-500 text-white rounded-lg py-2 px-3 max-w-xs md:max-w-md lg:max-w-lg">
+                                <p>${messageText}</p>
+                                <p class="text-xs text-blue-100 text-right mt-1">${timeString}</p>
+                            </div>
+                        </div>
+                    `;
+                    
+                    messagesContainer.appendChild(messageElement);
+                    messageInput.value = '';
+                    
+                    // Scroll to bottom
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    
+                    // Simulate reply after 1-3 seconds
+                    setTimeout(() => {
+                        const replies = [
+                            "That's interesting!",
+                            "I see what you mean.",
+                            "Thanks for letting me know.",
+                            "Got it!",
+                            "I'll get back to you on that.",
+                            "Sounds good!"
+                        ];
+                        const randomReply = replies[Math.floor(Math.random() * replies.length)];
+                        
+                        const replyElement = document.createElement('div');
+                        replyElement.classList.add('message-animation');
+                        replyElement.innerHTML = `
+                            <div class="flex justify-start">
+                                <div class="bg-white dark:bg-gray-700 rounded-lg py-2 px-3 max-w-xs md:max-w-md lg:max-w-lg">
+                                    <p class="text-gray-800 dark:text-white">${randomReply}</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${timeString}</p>
+                                </div>
+                            </div>
+                        `;
+                        
+                        messagesContainer.appendChild(replyElement);
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    }, 1000 + Math.random() * 2000);
+                }
+            }
+            
+            sendBtn.addEventListener('click', sendMessage);
+            messageInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            
+            // Responsive behavior
+            function handleResize() {
+                if (window.innerWidth >= 768) {
+                    document.querySelector('.w-80').classList.remove('hidden');
+                }
+            }
+            
+            window.addEventListener('resize', handleResize);
+        });
+    </script>
+</body>
+</html>
